@@ -58,7 +58,8 @@ def test_simple_rerun(runner, project, run):
 
     def _rerun():
         """Return greeting after reruning."""
-        assert 0 == run(args=('rerun', str(selected)))
+        result = run(args=('rerun', str(selected)))
+        assert 0 == result
         with selected.open('r') as fp:
             greeting = fp.read().strip()
             assert greeting in greetings
@@ -105,6 +106,26 @@ def test_rerun_with_inputs(runner, project, run):
 
     with output.open('r') as f:
         assert f.read() != initial_data, 'The output should have changed.'
+
+
+def test_rerun_with_inputs_with_from(runner, project, run):
+    """Test file recreation with specified inputs."""
+    cwd = Path(project)
+    first = cwd / 'first.txt'
+    second = cwd / 'second.txt'
+    inputs = (first, second)
+
+    output = cwd / 'output.txt'
+
+    cmd = [
+        'run', 'python', '-S', '-c', 'import random; print(random.random())'
+    ]
+
+    for file_ in inputs:
+        assert 0 == run(args=cmd, stdout=file_), 'Random number generation.'
+
+    cmd = ['run', 'cat'] + [str(path) for path in inputs]
+    assert 0 == run(args=cmd, stdout=output)
 
     # Keep the first file unchanged.
     with first.open('r') as f:
@@ -155,8 +176,8 @@ def test_rerun_with_edited_inputs(runner, project, run):
             catch_exceptions=False
         )
         assert 0 == result.exit_code
-        assert 'input_1: {0}\n'.format(first.name) == result.output
-
+        assert result.output.startswith('_:CommandInput')
+        assert result.output[:-1].endswith(first.name)
         assert 0 == run(
             args=('rerun', '--edit-inputs', '--from', str(first), str(second)),
             stdin=stdin

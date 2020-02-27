@@ -34,13 +34,13 @@ def test_limit_log(runner, project, run):
     assert 0 == run(args=('run', 'wc', '-c'), stdin=data, stdout=output)
     assert output.exists()
 
-    cmd = ['log', '--revision', 'HEAD^..', output.name]
+    cmd = ['log', '--revision', 'HEAD^^..', output.name]
     result = runner.invoke(cli, cmd)
     assert 0 == result.exit_code
     assert data.name not in result.output
     assert output.name in result.output
 
-    cmd = ['log', '--revision', 'HEAD^']
+    cmd = ['log', '--revision', 'HEAD^^^']
     result = runner.invoke(cli, cmd)
     assert 0 == result.exit_code
     assert data.name in result.output
