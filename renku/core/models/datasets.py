@@ -91,6 +91,8 @@ class Url:
         """Post-initialize attributes."""
         if not self.url:
             self.url = self.default_url()
+        elif '_id' in self.url:
+            self.url['@id'] = self.url.pop('_id')
 
 
 def _convert_creators(value):
@@ -336,6 +338,7 @@ def _convert_keyword(keywords):
     type='schema:Dataset',
     context={
         'schema': 'http://schema.org/',
+        'renku': 'https://swissdatasciencecenter.github.io/renku-ontology#',
     },
 )
 class Dataset(Entity, CreatorMixin):
@@ -417,9 +420,15 @@ class Dataset(Entity, CreatorMixin):
         context='schema:sameAs', default=None, kw_only=True, type=Url
     )
 
+    derived_from = jsonld.ib(
+        context='prov:wasDerivedFrom', default=None, kw_only=True, type=Url
+    )
+
     short_name = jsonld.ib(
         default=None, context='schema:alternateName', kw_only=True
     )
+
+    uid = jsonld.ib(default=None, context='renku:identifier', kw_only=True)
 
     @created.default
     def _now(self):
@@ -436,18 +445,11 @@ class Dataset(Entity, CreatorMixin):
             )
 
     @property
-    def uid(self):
-        """UUID part of identifier."""
-        if is_doi(self.identifier):
-            return self.identifier
-        return self.identifier.split('/')[-1]
-
-    @property
     def short_id(self):
         """Shorter version of identifier."""
         if is_doi(self.identifier):
             return self.identifier
-        return str(self.uid)[:8]
+        return str(self.identifier)[:8]
 
     @property
     def creators_csv(self):
@@ -555,42 +557,58 @@ class Dataset(Entity, CreatorMixin):
         index = self.find_file(file_path, return_index=True)
         return self.files.pop(index)
 
-    def __attrs_post_init__(self):
-        """Post-Init hook."""
-        from urllib.parse import quote
+    def replace_identifier(self, new_identifier):
+        """Replace identifier and update all related fields."""
+        self.identifier = new_identifier
+        self._set_id()
+        self.url = self._id
+        self._label = self.identifier
 
-        super().__attrs_post_init__()
-
+    def _get_host(self):
         # Determine the hostname for the resource URIs.
         # If RENKU_DOMAIN is set, it overrides the host from remote.
         # Default is localhost.
         host = 'localhost'
         if self.client:
             host = self.client.remote.get('host') or host
-        host = os.environ.get('RENKU_DOMAIN') or host
+        return os.environ.get('RENKU_DOMAIN') or host
 
+    def _set_id(self):
+        host = self._get_host()
         # always set the id by the identifier
         self._id = urllib.parse.urljoin(
-            'https://{host}'.format(host=host),
-            pathlib.posixpath.join(
-                '/datasets', quote(self.identifier, safe='')
-            )
+            f'https://{host}',
+            pathlib.posixpath.join('/datasets', self.identifier)
         )
 
+    def __attrs_post_init__(self):
+        """Post-Init hook."""
+        super().__attrs_post_init__()
+
+        self._set_id()
         self.url = self._id
+        self._label = self.identifier
+
+        if self.derived_from:
+            host = self._get_host()
+            derived_from_id = self.derived_from._id
+            derived_from_url = self.derived_from.url.get('@id')
+            u = urllib.parse.urlparse(derived_from_url)
+            derived_from_url = u._replace(netloc=host).geturl()
+            self.derived_from = Url(
+                id=derived_from_id, url_id=derived_from_url
+            )
+
+        # uid is used to create metadata directory and won't change once set
+        self.uid = self.uid or self.identifier
 
         # if `date_published` is set, we are probably dealing with
         # an imported dataset so `created` is not needed
         if self.date_published:
             self.created = None
 
-        self._label = self.identifier
-
         if not self.path:
-            self.path = str(
-                self.client.renku_datasets_path /
-                quote(str(self.uid), safe='')
-            )
+            self.path = str(self.client.renku_datasets_path / self.uid)
 
         if self.files and self.client is not None:
             for dataset_file in self.files:

@@ -969,7 +969,7 @@ def test_dataset_rm(tmpdir, runner, project, client, subdirectory):
     assert 2 == result.exit_code
 
     result = runner.invoke(cli, ['dataset', 'rm', 'does-not-exist'])
-    assert 2 == result.exit_code
+    assert 1 == result.exit_code
 
     # create a dataset
     result = runner.invoke(cli, ['dataset', 'create', 'my-dataset'])

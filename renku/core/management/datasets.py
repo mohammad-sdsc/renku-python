@@ -43,7 +43,7 @@ from renku.core import errors
 from renku.core.management.clone import clone
 from renku.core.management.config import RENKU_HOME
 from renku.core.management.migrate import is_project_unsupported, migrate
-from renku.core.models.datasets import Dataset, DatasetFile, DatasetTag, \
+from renku.core.models.datasets import Dataset, DatasetFile, DatasetTag, Url, \
     is_dataset_short_name_valid
 from renku.core.models.git import GitURL
 from renku.core.models.locals import with_reference
@@ -129,12 +129,18 @@ class DatasetsApiMixin(object):
 
         return path
 
-    def load_dataset(self, short_name=None):
+    def load_dataset(self, short_name=None, strict=False):
         """Load dataset reference file."""
+        dataset = None
         if short_name:
             path = self.get_dataset_path(short_name)
             if path and path.exists():
-                return self.load_dataset_from_path(path)
+                dataset = self.load_dataset_from_path(path)
+
+        if not dataset and strict:
+            raise errors.DatasetNotFound(name=short_name)
+
+        return dataset
 
     @contextmanager
     def with_dataset(self, short_name=None, create=False):
@@ -215,6 +221,7 @@ class DatasetsApiMixin(object):
             dataset = Dataset(
                 client=self,
                 identifier=identifier,
+                uid=identifier,
                 short_name=short_name,
                 name=title,
                 description=description,
@@ -432,8 +439,11 @@ class DatasetsApiMixin(object):
                 dataset_file.path = str(data['path'])
             dataset_files.append(dataset_file)
 
+        n_files_before = len(dataset.files)
         dataset.update_files(dataset_files)
-        return warning_messages, messages
+        n_files_after = len(dataset.files)
+        dataset_modified = n_files_before != n_files_after
+        return dataset_modified, warning_messages, messages
 
     def _check_protected_path(self, path):
         """Checks if a path is a protected path."""
@@ -864,7 +874,6 @@ class DatasetsApiMixin(object):
                 raise errors.ParameterError(
                     'Tag {} already exists'.format(tag)
                 )
-
         latest_commit = list(self.dataset_commits(dataset, max_results=1))[0]
 
         actor = actor or 'user'
@@ -1011,6 +1020,7 @@ class DatasetsApiMixin(object):
                 modified_datasets[file_.dataset.name] = file_.dataset
 
         for dataset in modified_datasets.values():
+            self.mutate_dataset(dataset)
             dataset.to_yaml()
 
         return deleted_files
@@ -1289,6 +1299,24 @@ class DatasetsApiMixin(object):
             return extract_dataset(download_to)
 
         return download_to.parent, [download_to]
+
+    def mutate_dataset(self, dataset):
+        """Assigns a new identifier to a dataset."""
+        dataset.same_as = None
+
+        # Store derivation info
+        dataset.derived_from = Url(url_id=dataset._id)
+
+        # Tag dataset with the old identifier
+        self.add_dataset_tag(
+            dataset=dataset, tag=dataset.identifier, actor='renku'
+        )
+
+        # Assign a new ID
+        new_identifier = str(uuid.uuid4())
+        dataset.replace_identifier(new_identifier)
+
+        dataset.to_yaml()
 
 
 class DownloadProgressCallback:

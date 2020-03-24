@@ -8,6 +8,7 @@
       "foaf": "http://xmlns.com/foaf/0.1/",
       "prov": "http://www.w3.org/ns/prov#",
       "wfprov": "http://purl.org/wf4ever/wfprov#",
+      "renku": "https://swissdatasciencecenter.github.io/renku-ontology#",
       "closed": {
          "@id": "sh:closed",
          "@type": "http://www.w3.org/2001/XMLSchema#boolean"
@@ -297,6 +298,15 @@
             },
             {
                "nodeKind": "sh:Literal",
+               "path": "renku:identifier",
+               "datatype": {
+                  "@id": "xsd:string"
+               },
+               "minCount": 1,
+               "maxCount": 1
+            },
+            {
+               "nodeKind": "sh:Literal",
                "path": "schema:keywords",
                "datatype": {
                   "@id": "xsd:string"
@@ -322,6 +332,12 @@
             },
             {
                "path": "schema:sameAs",
+               "sh:class": {
+                  "@id": "schema:URL"
+               }
+            },
+            {
+               "path": "prov:wasDerivedFrom",
                "sh:class": {
                   "@id": "schema:URL"
                }

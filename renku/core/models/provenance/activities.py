@@ -19,7 +19,6 @@
 
 import os
 import urllib
-import uuid
 from collections import OrderedDict
 from pathlib import Path, posixpath
 
@@ -245,10 +244,10 @@ class Activity(CommitMixin):
             )
 
             if all([is_dataset, not_refs, does_not_exists]):
-                uid = uuid.UUID(path_.parent.name)
+                uid = path_.parent.name
                 path_ = (
-                    Path(self.client.renku_home) / self.client.DATASETS /
-                    str(uid) / self.client.METADATA
+                    Path(self.client.renku_home) / self.client.DATASETS / uid /
+                    self.client.METADATA
                 )
 
             index.add(str(path_))

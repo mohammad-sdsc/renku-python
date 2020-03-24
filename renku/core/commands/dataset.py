@@ -137,6 +137,9 @@ def edit_dataset(
             dataset.keywords = keywords
             updated.append('keywords')
 
+        if updated:
+            client.mutate_dataset(dataset)
+
     return updated, no_email_warnings
 
 
@@ -272,7 +275,7 @@ def add_to_dataset(
             short_name=short_name, create=create
         ) as dataset:
             with urlscontext(urls) as bar:
-                warning_messages, messages = client.add_data_to_dataset(
+                modified, warning_msgs, messages = client.add_data_to_dataset(
                     dataset,
                     bar,
                     external=external,
@@ -291,8 +294,8 @@ def add_to_dataset(
                 for msg in messages:
                     click.echo(INFO + msg)
 
-            if warning_messages:
-                for msg in warning_messages:
+            if warning_msgs:
+                for msg in warning_msgs:
                     click.echo(WARNING + msg)
 
             if with_metadata:
@@ -305,6 +308,8 @@ def add_to_dataset(
 
                 dataset.update_metadata(with_metadata)
                 dataset.same_as = with_metadata.same_as
+            elif modified:
+                client.mutate_dataset(dataset)
 
     except DatasetNotFound:
         raise DatasetNotFound(
@@ -394,6 +399,7 @@ def file_unlink(
     for item in records:
         dataset.unlink_file(item.path)
 
+    client.mutate_dataset(dataset)
     dataset.to_yaml()
 
 
@@ -402,58 +408,23 @@ def file_unlink(
     commit=True,
     commit_only=DATASET_METADATA_PATHS,
 )
-def dataset_remove(
-    client,
-    short_names,
-    with_output=False,
-    datasetscontext=contextlib.nullcontext,
-    referencescontext=contextlib.nullcontext,
-    commit_message=None
-):
+def dataset_remove(client, short_name, interactive=False, commit_message=None):
     """Delete a dataset."""
-    datasets = {name: client.get_dataset_path(name) for name in short_names}
+    dataset = client.load_dataset(short_name=short_name, strict=True)
+    client.mutate_dataset(dataset)
 
-    if not datasets:
-        raise ParameterError(
-            'use dataset short_name or identifier', param_hint='short_names'
-        )
+    client.repo.git.add(dataset.path)
+    client.repo.index.commit('renku dataset rm: final mutation')
 
-    unknown = [
-        name
-        for name, path in datasets.items() if not path or not path.exists()
-    ]
-    if unknown:
-        raise ParameterError(
-            'unknown datasets ' + ', '.join(unknown), param_hint='short_names'
-        )
+    ref_path = client.get_dataset_path(short_name)
 
-    datasets = set(datasets.values())
+    metadata_path = client.path / dataset.path
+    shutil.rmtree(metadata_path, ignore_errors=True)
+
     references = list(LinkReference.iter_items(client, common_path='datasets'))
-
-    if not with_output:
-        for dataset in datasets:
-            if dataset and dataset.exists():
-                dataset.unlink()
-
-        for ref in references:
-            if ref.reference in datasets:
-                ref.delete()
-
-        return datasets, references
-
-    datasets_c = datasetscontext(datasets)
-
-    with datasets_c as bar:
-        for dataset in bar:
-            if dataset and dataset.exists():
-                dataset.unlink()
-
-    references_c = referencescontext(references)
-
-    with references_c as bar:
-        for ref in bar:
-            if ref.reference in datasets:
-                ref.delete()
+    for ref in references:
+        if ref.reference == ref_path:
+            ref.delete()
 
 
 @pass_local_client(clean=True, commit=False)
