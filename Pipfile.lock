@@ -224,6 +224,12 @@
             ],
             "version": "==2.9"
         },
+        "cwlgen": {
+            "hashes": [
+                "sha256:08cc1a3f9dd79188691bafbf79f3d20f38356e367ba50131040d2705fc7e24d3"
+            ],
+            "version": "==0.4.0"
+        },
         "cwlref-runner": {
             "hashes": [
                 "sha256:78152148b9b262797d0861584cefe462451da3661b6a7f73ef9ea0038be0dd13",
