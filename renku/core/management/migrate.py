@@ -34,7 +34,7 @@ from pathlib import Path
 
 import pkg_resources
 
-SUPPORTED_PROJECT_VERSION = 4
+SUPPORTED_PROJECT_VERSION = 5
 
 
 def is_migration_required(client):
