@@ -27,7 +27,7 @@ from functools import partial
 from pathlib import Path
 
 import attr
-from attr.validators import instance_of
+from attr.validators import in_, instance_of
 
 from renku.core import errors
 from renku.core.models.entities import Entity
@@ -141,6 +141,8 @@ def _extract_doi(value):
 class DatasetTag(object):
     """Represents a Tag of an instance of a dataset."""
 
+    ACTORS = ['user', 'renku']
+
     client = attr.ib(default=None, kw_only=True)
 
     name = jsonld.ib(
@@ -170,6 +172,14 @@ class DatasetTag(object):
 
     dataset = jsonld.ib(context='schema:about', default=None, kw_only=True)
 
+    actor = jsonld.ib(
+        context='schema:actor',
+        default=None,
+        kw_only=True,
+        converter=lambda value: value or 'user',
+        validator=in_(ACTORS)
+    )
+
     _id = jsonld.ib(kw_only=True, context='@id')
 
     @created.default
@@ -182,6 +192,11 @@ class DatasetTag(object):
         """Define default value for id field."""
         id_ = uuid.uuid4().hex
         return f'_:Tag{id_}'
+
+    @property
+    def is_from_user(self):
+        """Return True if tag is created by user."""
+        return self.actor == 'user'
 
 
 @jsonld.s(

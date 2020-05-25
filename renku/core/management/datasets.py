@@ -832,7 +832,9 @@ class DatasetsApiMixin(object):
 
         return commits
 
-    def add_dataset_tag(self, dataset, tag, description='', force=False):
+    def add_dataset_tag(
+        self, dataset, tag, description='', force=False, actor=None
+    ):
         """Adds a new tag to a dataset.
 
         Validates if the tag already exists and that the tag follows
@@ -865,11 +867,14 @@ class DatasetsApiMixin(object):
 
         latest_commit = list(self.dataset_commits(dataset, max_results=1))[0]
 
+        actor = actor or 'user'
+
         tag = DatasetTag(
             name=tag,
             description=description,
             commit=latest_commit.hexsha,
-            dataset=dataset.short_name
+            dataset=dataset.short_name,
+            actor=actor
         )
 
         dataset.tags.append(tag)
