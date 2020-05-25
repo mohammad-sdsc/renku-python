@@ -1191,7 +1191,7 @@ def test_dataset_provider_resolution_dataverse(doi_responses, uri):
     assert type(provider) is DataverseProvider
 
 
-def test_dataset_tag(tmpdir, runner, project, subdirectory):
+def test_dataset_tag(tmpdir, runner, client, subdirectory):
     result = runner.invoke(cli, ['dataset', 'create', 'my-dataset'])
     assert 0 == result.exit_code
     assert 'OK' in result.output
@@ -1208,6 +1208,8 @@ def test_dataset_tag(tmpdir, runner, project, subdirectory):
         catch_exceptions=False,
     )
     assert 0 == result.exit_code
+
+    before_id = client.load_dataset('my-dataset').identifier
 
     # tag dataset
     result = runner.invoke(
@@ -1231,6 +1233,10 @@ def test_dataset_tag(tmpdir, runner, project, subdirectory):
     )
     assert 0 == result.exit_code
 
+    # Check ID won't change when adding tags
+    after_id = client.load_dataset('my-dataset').identifier
+    assert before_id == after_id
+
 
 @pytest.mark.parametrize('form', ['tabular', 'json-ld'])
 def test_dataset_ls_tags(tmpdir, runner, project, client, form):
@@ -1241,6 +1247,8 @@ def test_dataset_ls_tags(tmpdir, runner, project, client, form):
     # create some data
     new_file = tmpdir.join('file')
     new_file.write(str('test'))
+
+    before_id = client.load_dataset('my-dataset').identifier
 
     # add data to dataset
     result = runner.invoke(
@@ -1279,6 +1287,7 @@ def test_dataset_ls_tags(tmpdir, runner, project, client, form):
     assert '1.0' in result.output
     assert 'aBc9.34-11_55.t' in result.output
     assert 'first tag!' in result.output
+    assert before_id not in result.output
     assert commit1 in result.output
     assert commit2 in result.output
 
@@ -1886,3 +1895,81 @@ def test_workflow_with_external_file(
 
     attributes = (client.path / '.gitattributes').read_text().split()
     assert 'data/output.txt' in attributes
+
+
+def test_immutability(directory_tree, runner, client):
+    """Test dataset's ID changes after a change to a dataset."""
+    # create a dataset
+    assert 0 == runner.invoke(cli, ['dataset', 'create', 'my-data']).exit_code
+
+    old_dataset = client.load_dataset('my-data')
+
+    # Add some files
+    result = runner.invoke(
+        cli, ['dataset', 'add', 'my-data', directory_tree.strpath]
+    )
+    assert 0 == result.exit_code
+
+    dataset = client.load_dataset('my-data')
+
+    assert old_dataset._id != dataset._id
+    assert old_dataset.identifier != dataset.identifier
+    assert old_dataset.uid == dataset.uid
+    assert old_dataset.path == dataset.path
+    assert old_dataset._id == dataset.derived_from.url['@id']
+    assert dataset.same_as is None
+    assert dataset.identifier in dataset._id
+    assert dataset.identifier in dataset._label
+    assert dataset.identifier in dataset.url
+
+    ids = {}
+    # `renku add` creates a separate commit for files
+    ids[old_dataset.identifier] = list(client.repo.iter_commits())[1].hexsha
+    old_dataset = dataset
+    ids[old_dataset.identifier] = client.repo.head.object.hexsha
+
+    # Remove some files
+    result = runner.invoke(
+        cli, ['dataset', 'unlink', 'my-data', '-I', 'file', '--yes']
+    )
+    assert 0 == result.exit_code
+
+    dataset = client.load_dataset('my-data')
+
+    assert old_dataset._id != dataset._id
+    assert old_dataset._id == dataset.derived_from.url['@id']
+    assert old_dataset.identifier != dataset.identifier
+    assert old_dataset.uid == dataset.uid
+    assert old_dataset.path == dataset.path
+    assert dataset.same_as is None
+    assert dataset.identifier in dataset._id
+    assert dataset.identifier in dataset._label
+    assert dataset.identifier in dataset.url
+
+    tags = {t.name: t.commit for t in dataset.tags}
+    assert ids == tags
+
+
+def test_immutability_after_remove(directory_tree, runner, client):
+    """Test dataset's ID changes after a change to a dataset."""
+    # create a dataset
+    assert 0 == runner.invoke(cli, ['dataset', 'create', 'my-data']).exit_code
+
+    old_dataset = client.load_dataset('my-data')
+
+    assert 0 == runner.invoke(cli, ['dataset', 'rm', 'my-data']).exit_code
+    assert client.load_dataset('my-data') is None
+
+    # Checkout previous commit that has dataset's final version
+    client.repo.git.checkout('HEAD~')
+    dataset = client.load_dataset('my-data')
+
+    assert old_dataset._id != dataset._id
+    assert old_dataset._id == dataset.derived_from.url['@id']
+    assert old_dataset.identifier != dataset.identifier
+    assert old_dataset.uid == dataset.uid
+    assert old_dataset.path == dataset.path
+    assert dataset.same_as is None
+    assert dataset.identifier in dataset._id
+    assert dataset.identifier in dataset._label
+    assert dataset.identifier in dataset.url

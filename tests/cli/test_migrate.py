@@ -113,10 +113,14 @@ def test_remove_committed_lock_file(isolated_runner, old_project):
     repo.index.add(['.renku.lock'])
     repo.index.commit('locked')
 
+    client = LocalClient(path=old_project['path'])
+    project_version = int(client.project.version)
+
     result = isolated_runner.invoke(cli, ['migrate'])
     assert 0 == result.exit_code
 
-    assert (repo_path / '.renku.lock').exists() is False
+    if project_version < 3:
+        assert (repo_path / '.renku.lock').exists() is False
     assert repo.is_dirty() is False
 
     ignored = (repo_path / '.gitignore').read_text()
@@ -177,3 +181,24 @@ def test_migrations_no_commit(isolated_runner, old_project):
     assert 0 == result.exit_code
     assert 'OK' in result.output
     assert sha_before == client.repo.head.object.hexsha
+
+
+@pytest.mark.migration
+def test_correct_id_for_tag_and_same_as(isolated_runner, old_project):
+    """Check if path on dataset metadata path has been correctly migrated."""
+    result = isolated_runner.invoke(cli, ['migrate'])
+    assert 0 == result.exit_code
+
+    client = LocalClient(path=old_project['path'])
+
+    for dataset in client.datasets.values():
+        if dataset.same_as:
+            id_ = dataset.same_as._id
+            assert id_.startswith('_:')
+            assert id_[2:].isalnum()
+
+        for tag in dataset.tags:
+            id_ = tag._id
+            assert id_.startswith('_:')
+            assert id_[2:].isalnum()
+            assert dataset.short_name == tag.dataset

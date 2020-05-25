@@ -372,6 +372,10 @@ def data_repository(directory_tree):
             'name': 'test-renku-v0.3.0.git',
             'exit_code': 1
         },
+        {
+            'name': 'old-datasets-v0.10.4.git',
+            'exit_code': 0
+        },
     ],
     scope='module',
 )
