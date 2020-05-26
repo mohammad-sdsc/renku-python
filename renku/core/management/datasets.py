@@ -869,7 +869,7 @@ class DatasetsApiMixin(object):
             name=tag,
             description=description,
             commit=latest_commit.hexsha,
-            dataset=dataset.name
+            dataset=dataset.short_name
         )
 
         dataset.tags.append(tag)

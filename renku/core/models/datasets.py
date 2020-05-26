@@ -65,15 +65,8 @@ class Url:
     @_id.default
     def default_id(self):
         """Define default value for id field."""
-        if self.url_str:
-            parsed_result = urllib.parse.urlparse(self.url_str)
-            id_ = urllib.parse.ParseResult('', *parsed_result[1:]).geturl()
-        elif self.url_id:
-            parsed_result = urllib.parse.urlparse(self.url_id)
-            id_ = urllib.parse.ParseResult('', *parsed_result[1:]).geturl()
-        else:
-            id_ = str(uuid.uuid4())
-        return '_:URL@{0}'.format(id_)
+        id_ = uuid.uuid4().hex
+        return f'_:URL{id_}'
 
     def default_url(self):
         """Define default value for url field."""
@@ -187,7 +180,8 @@ class DatasetTag(object):
     @_id.default
     def default_id(self):
         """Define default value for id field."""
-        return '_:{0}@{1}'.format(self.name, self.commit)
+        id_ = uuid.uuid4().hex
+        return f'_:Tag{id_}'
 
 
 @jsonld.s(
