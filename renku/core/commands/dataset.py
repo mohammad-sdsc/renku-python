@@ -24,6 +24,7 @@ from pathlib import Path
 
 import click
 import git
+import patoolib
 import requests
 
 from renku.core import errors
@@ -540,6 +541,35 @@ def import_dataset(
     yes=False,
     commit_message=None,
     progress=None,
+    previous_dataset=None,
+    delete=False
+):
+    """Import data from a 3rd party provider or another renku project."""
+    import_dataset_with_client(
+        client,
+        uri,
+        short_name=short_name,
+        extract=extract,
+        with_prompt=with_prompt,
+        yes=yes,
+        commit_message=commit_message,
+        progress=progress,
+        previous_dataset=previous_dataset,
+        delete=delete
+    )
+
+
+def import_dataset_with_client(
+    client,
+    uri,
+    short_name='',
+    extract=False,
+    with_prompt=False,
+    yes=False,
+    commit_message=None,
+    progress=None,
+    previous_dataset=None,
+    delete=False
 ):
     """Import data from a 3rd party provider or another renku project."""
     provider, err = ProviderFactory.from_uri(uri)
@@ -596,6 +626,7 @@ def import_dataset(
         raise ParameterError('Dataset {} has no files.'.format(uri))
 
     dataset.same_as = Url(url_id=remove_credentials(uri))
+    new_files = list(dataset.files)
 
     if not provider.is_git_based:
         if not short_name:
@@ -615,7 +646,7 @@ def import_dataset(
             client,
             urls=urls,
             short_name=short_name,
-            create=True,
+            create=not previous_dataset,
             with_metadata=dataset,
             force=True,
             extract=extract,
@@ -625,6 +656,23 @@ def import_dataset(
             interactive=with_prompt,
             total_size=total_size,
         )
+
+        if previous_dataset:
+            previous_dataset.update_metadata(dataset)
+            current_files = set(f.url for f in new_files)
+            # remove files not present in the dataset anymore
+            for f in previous_dataset.files:
+                if f.url in current_files:
+                    continue
+
+                previous_dataset.unlink_file(f.path)
+
+                if delete:
+                    client.remove_file(client.path / f.path)
+
+            dataset = previous_dataset
+            client.mutate_dataset(dataset)
+            dataset.to_yaml()
 
         if dataset.version:
             tag_name = re.sub('[^a-zA-Z0-9.-_]', '_', dataset.version)
@@ -663,13 +711,81 @@ def update_datasets(
     progress_context=contextlib.nullcontext,
     commit_message=None,
 ):
-    """Update files from a remote Git repo."""
+    """Update files from a remote location."""
+    ignored_datasets = []
+
+    if ((include or exclude) and short_names and any(
+        d.same_as
+        for d in client.datasets.values() if d.short_name in short_names
+    )):
+        raise errors.UsageError(
+            '--include/--exclude is incompatible with datasets created by'
+            ' `renku dataset import`'
+        )
+
+    short_names_provided = bool(short_names)
+
+    # update imported datasets
+    if not include and not exclude:
+        for dataset in client.datasets.values():
+            if (
+                short_names and dataset.short_name not in short_names or
+                not dataset.same_as
+            ):
+                continue
+
+            uri = dataset.same_as.url
+            provider, err = ProviderFactory.from_uri(uri)
+
+            if not provider:
+                continue
+
+            record = provider.find_record(uri, client)
+
+            if record.is_last_version(uri):
+                continue
+
+            uri = record.links.get('latest_html')
+
+            # set extract to false if there are any archives present in the dataset
+            extract = True
+            for f in dataset.files:
+                try:
+                    patoolib.get_archive_format(f.path)
+                except patoolib.util.PatoolError:
+                    continue
+                else:
+                    extract = False
+                    break
+
+            import_dataset_with_client(
+                client,
+                uri,
+                short_name=dataset.short_name,
+                extract=extract,
+                yes=True,
+                previous_dataset=dataset,
+                delete=delete
+            )
+
+            if short_names:
+                short_names.remove(dataset.short_name)
+            ignored_datasets.append(dataset.short_name)
+    else:
+        ignored_datasets = [
+            d.short_name for d in client.datasets.values() if d.same_as
+        ]
+
+    if short_names_provided and not short_names:
+        return
+
     records = _filter(
         client,
         short_names=short_names,
         creators=creators,
         include=include,
-        exclude=exclude
+        exclude=exclude,
+        ignore=ignored_datasets
     )
 
     if not records:
@@ -705,7 +821,7 @@ def update_datasets(
     with progress_context(
         possible_updates, item_show_func=lambda x: x.path if x else None
     ) as progressbar:
-        deleted_files = client.update_dataset_files(
+        deleted_files = client.update_dataset_git_files(
             files=progressbar, ref=ref, delete=delete
         )
 
@@ -738,7 +854,12 @@ def _include_exclude(file_path, include=None, exclude=None):
 
 
 def _filter(
-    client, short_names=None, creators=None, include=None, exclude=None
+    client,
+    short_names=None,
+    creators=None,
+    include=None,
+    exclude=None,
+    ignore=None
 ):
     """Filter dataset files by specified filters.
 
@@ -755,7 +876,8 @@ def _filter(
 
     records = []
     for dataset in client.datasets.values():
-        if not short_names or dataset.short_name in short_names:
+        if ((not short_names or dataset.short_name in short_names) and
+            (not ignore or dataset.short_name not in ignore)):
             for file_ in dataset.files:
                 file_.dataset = dataset
                 file_.client = client
