@@ -267,7 +267,7 @@ class DataverseRecordSerializer:
         )
         response = self._dataverse._make_request(uri).json()
         newest_version = response['data'][0]
-        return "{}.{}".format(
+        return '{}.{}'.format(
             newest_version['versionNumber'],
             newest_version['versionMinorNumber']
         )

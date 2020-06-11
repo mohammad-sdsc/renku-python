@@ -771,6 +771,12 @@ def update_datasets(
                 delete=delete
             )
 
+            click.echo(
+                'Updated dataset {} from remote provider'.format(
+                    dataset.short_name
+                )
+            )
+
             if short_names:
                 short_names.remove(dataset.short_name)
             ignored_datasets.append(dataset.short_name)
@@ -824,7 +830,7 @@ def update_datasets(
     with progress_context(
         possible_updates, item_show_func=lambda x: x.path if x else None
     ) as progressbar:
-        deleted_files = client.update_dataset_git_files(
+        updated_files, deleted_files = client.update_dataset_git_files(
             files=progressbar, ref=ref, delete=delete
         )
 
@@ -833,6 +839,7 @@ def update_datasets(
             'Some files are deleted from remote. To also delete them locally '
             'run update command with `--delete` flag.'
         )
+    click.echo('Updated {} files'.format(len(updated_files)))
 
 
 def _include_exclude(file_path, include=None, exclude=None):

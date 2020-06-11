@@ -1019,7 +1019,7 @@ def test_dataset_update_dataverse(client, runner, doi):
     assert 0 == result.exit_code, result.output + str(result.stderr_bytes)
 
     with client.with_dataset('imported_dataset') as dataset:
-        dataset.version = "0.1"
+        dataset.version = '0.1'
         dataset.tags = []
 
     client.repo.git.add(update=True)
