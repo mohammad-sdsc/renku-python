@@ -886,8 +886,11 @@ def _filter(
 
     records = []
     for dataset in client.datasets.values():
-        if ((not short_names or dataset.short_name in short_names) and
-            (not ignore or dataset.short_name not in ignore)):
+        match_short_name = (
+            not short_names or dataset.short_name in short_names
+        )
+        not_ignored = (not ignore or dataset.short_name not in ignore)
+        if (match_short_name and not_ignored):
             for file_ in dataset.files:
                 file_.dataset = dataset
                 file_.client = client
