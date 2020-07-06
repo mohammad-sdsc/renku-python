@@ -19,7 +19,7 @@ jobs:
     - name: Checkout renku-project-template
       uses: actions/checkout@v2
       with:
-        repository: https://github.com/mohammad-sdsc/renku-project-template.git
+        repository: mohammad-sdsc/renku-project-template
         path: renku-project-template
     - name: Set up Python
       uses: actions/setup-python@v1
