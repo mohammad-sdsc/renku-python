@@ -1,4 +1,4 @@
-name: create setup.py
+name: Publish templates
 
 on:
   push:
@@ -11,27 +11,35 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout renku-python
+      uses: actions/checkout@v2
       with:
         fetch-depth: 1
-    - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+        path: renku-python
+      run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+    - name: Checkout renku-project-template
+      uses: actions/checkout@v2
+      with:
+        repository: https://github.com/mohammad-sdsc/renku-project-template.git
+        path: renku-project-template
     - name: Set up Python
       uses: actions/setup-python@v1
       with:
         python-version: 3.7
     - name: Install dependencies
       run: |
+        cd renku-python
         python -m pip install --upgrade pip
         python -m pip install .[all]
-    - name: Publish shape
-      run: |
-        git clone https://${{secrets.TEMPLATES_ACCESS_TOKEN}}@github.com/mohammad-sdsc/renku-project-template.git renku-project-template
-        cd renku-project-template
-        git checkout origin/auto-update-templates 2>/dev/null || git checkout -b auto-update-templates
-        git rm -r *
-        cp -r ../renku/templates/* .
-        git config --local user.email "renku@datascience.ch"
-        git config --local user.name "RenkuBot"
-        git add *
-        git commit -m "Update templates from $(renku --version)"
-        git push -u origin auto-update-templates
+    - name: Commit and create/update pull request
+      uses: peter-evans/create-pull-request@v2
+      with:
+        token: ${{ secrets.TEMPLATES_ACCESS_TOKEN }}
+        path: renku-project-template
+        author: RenkuBot <renku@datascience.ch>
+        committer: RenkuBot <renku@datascience.ch>
+        commit-message: "Update templates from $(renku --version)"
+        title: "Update templates from $(renku --version)"
+        body: "Auto-generated PR to publish template changes"
+        labels: automerge
+        branch: auto-update-templates
