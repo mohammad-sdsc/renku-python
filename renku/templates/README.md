@@ -4,6 +4,7 @@ changes
 
 This should be copied
 Update
+Final test
 
 
 # renku-project-template
