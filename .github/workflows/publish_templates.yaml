@@ -16,7 +16,6 @@ jobs:
       with:
         fetch-depth: 1
         path: renku-python
-      run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
     - name: Checkout renku-project-template
       uses: actions/checkout@v2
       with:
