@@ -1,0 +1,37 @@
+name: create setup.py
+
+on:
+  push:
+    branches:
+    - master
+    paths:
+    - 'renku/templates/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install .[all]
+    - name: Publish shape
+      run: |
+        git clone https://${{secrets.TEMPLATES_ACCESS_TOKEN}}@github.com/mohammad-sdsc/renku-project-template.git renku-project-template
+        cd renku-project-template
+        git checkout origin/auto-update-templates 2>/dev/null || git checkout -b auto-update-templates
+        git rm -r *
+        cp -r ../renku/templates/* .
+        git config --local user.email "renku@datascience.ch"
+        git config --local user.name "RenkuBot"
+        git add *
+        git commit -m "Update templates from $(renku --version)"
+        git push -u origin auto-update-templates
