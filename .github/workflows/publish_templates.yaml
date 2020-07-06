@@ -21,15 +21,6 @@ jobs:
       with:
         repository: mohammad-sdsc/renku-project-template
         path: renku-project-template
-    - name: Set up Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.7
-    - name: Install dependencies
-      run: |
-        cd renku-python
-        python -m pip install --upgrade pip
-        python -m pip install .[all]
     - name: Update templates
       run: |
         cd renku-project-template
@@ -42,8 +33,8 @@ jobs:
         path: renku-project-template
         author: RenkuBot <renku@datascience.ch>
         committer: RenkuBot <renku@datascience.ch>
-        commit-message: "Update templates from $(renku --version)"
-        title: "Update templates from $(renku --version)"
+        commit-message: "Update templates"
+        title: "Update templates"
         body: "Auto-generated PR to publish template changes"
         labels: automerge
         branch: auto-update-templates
