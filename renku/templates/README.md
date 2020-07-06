@@ -2,7 +2,7 @@ New changes
 some more changes
 changes
 
-
+This should be copied
 
 
 # renku-project-template
