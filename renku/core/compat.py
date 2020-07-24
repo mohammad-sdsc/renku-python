@@ -16,8 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. some new changes.
 """Compatibility layer for different Python versions."""
-
-
 import cgi
 import contextlib
 import html
