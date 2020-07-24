@@ -94,6 +94,7 @@ readme = open('README.rst').read()
 history = open('CHANGES.rst').read()
 
 tests_require = [
+    'black>=19.10b0',
     'check-manifest>=0.37',
     'coverage>=4.5.3',
     'fakeredis==1.4.1',
@@ -108,11 +109,9 @@ tests_require = [
     'pytest-flake8>=1.0.4',
     'pytest-timeout>=1.3.4',
     'pytest-pep8>=1.0.6',
-    'pytest-yapf>=0.1.1',
     'pytest>=4.0.0',
     'responses>=0.7.0',
     'unify>=0.4',
-    'yapf==0.27.0',
 ]
 
 extras_require = {

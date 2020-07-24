@@ -16,16 +16,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-[pytest]
-addopts = --flake8 --pep8 --doctest-glob="*.rst" --doctest-modules --cov=renku --cov-config .coveragerc --cov-report=term-missing
-doctest_optionflags = ALLOW_UNICODE ALLOW_BYTES DONT_ACCEPT_TRUE_FOR_1 ELLIPSIS IGNORE_EXCEPTION_DETAIL
-pep8ignore = docs/conf.py ALL
-flake8-ignore = docs/conf.py ALL
-testpaths = docs tests renku conftest.py
-markers =
-    integration: mark a test as a integration.
-    service: mark a test as service test.
-    jobs: mark a test as a job test.
-    migration: mark a test as a migration test.
-    shelled: mark a test as a shelled test.
-    pep8: mark a test as a pep8 format test.
+[tool.black]
+line-length = 120
+target-version = ['py36', 'py37', 'py38']
+include = '\.pyi?$'
+exclude = '''
+(
+  /(
+      \.eggs
+    | \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  | docs/conf.py
+)
+'''
