@@ -67,7 +67,7 @@ class RenkuGitWildMatchPattern(pathspec.patterns.GitWildMatchPattern):
         self.pattern = pattern
 
 
-pathspec.util.register_pattern("renku_gitwildmatch", RenkuGitWildMatchPattern)
+pathspec.util.register_pattern('renku_gitwildmatch', RenkuGitWildMatchPattern)
 
 __all__ = (
     "FileNotFoundError",
