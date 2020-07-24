@@ -25,11 +25,9 @@ from .tabulate import tabulate
 def tabular(client, datasets, *, columns=None):
     """Format datasets with a tabular output."""
     if not columns:
-        columns = 'id,created,short_name,creators,tags,version'
+        columns = "id,created,short_name,creators,tags,version"
 
-    return tabulate(
-        collection=datasets, columns=columns, columns_mapping=DATASETS_COLUMNS
-    )
+    return tabulate(collection=datasets, columns=columns, columns_mapping=DATASETS_COLUMNS)
 
 
 def jsonld(client, datasets, **kwargs):
@@ -39,19 +37,19 @@ def jsonld(client, datasets, **kwargs):
 
 
 DATASETS_FORMATS = {
-    'tabular': tabular,
-    'json-ld': jsonld,
+    "tabular": tabular,
+    "json-ld": jsonld,
 }
 """Valid formatting options."""
 
 DATASETS_COLUMNS = {
-    'id': ('uid', 'id'),
-    'created': ('created', None),
-    'short_name': ('short_name', None),
-    'creators': ('creators_csv', 'creators'),
-    'creators_full': ('creators_full_csv', 'creators'),
-    'tags': ('tags_csv', 'tags'),
-    'version': ('version', None),
-    'title': ('name', 'title'),
-    'keywords': ('keywords_csv', 'keywords'),
+    "id": ("uid", "id"),
+    "created": ("created", None),
+    "short_name": ("short_name", None),
+    "creators": ("creators_csv", "creators"),
+    "creators_full": ("creators_full_csv", "creators"),
+    "tags": ("tags_csv", "tags"),
+    "version": ("version", None),
+    "title": ("name", "title"),
+    "keywords": ("keywords_csv", "keywords"),
 }

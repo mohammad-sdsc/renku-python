@@ -46,12 +46,12 @@ def make_dataset_add_payload(project_id, urls, short_name=None):
             files.append({url[0]: url[1]})
 
         if isinstance(url, str):
-            files.append({'file_url': url})
+            files.append({"file_url": url})
 
     return {
-        'project_id': project_id,
-        'short_name': short_name or uuid.uuid4().hex,
-        'create_dataset': True,
-        'force': False,
-        'files': files
+        "project_id": project_id,
+        "short_name": short_name or uuid.uuid4().hex,
+        "create_dataset": True,
+        "force": False,
+        "files": files,
     }

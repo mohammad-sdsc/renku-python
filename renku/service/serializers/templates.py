@@ -28,13 +28,13 @@ class ManifestTemplatesRequest(ProjectCloneContext):
     """Request schema for listing manifest templates."""
 
     url = fields.String(required=True)
-    ref = fields.String(missing='master')
+    ref = fields.String(missing="master")
     depth = fields.Integer(missing=TEMPLATE_CLONE_DEPTH_DEFAULT)
 
     @pre_load()
     def set_git_url(self, data, **kwargs):
         """Set git_url field."""
-        data['git_url'] = data['url']
+        data["git_url"] = data["url"]
 
         return data
 
@@ -51,9 +51,7 @@ class ManifestTemplateSchema(Schema):
 class ManifestTemplatesResponse(Schema):
     """Manifest templates response."""
 
-    templates = fields.List(
-        fields.Nested(ManifestTemplateSchema), required=True
-    )
+    templates = fields.List(fields.Nested(ManifestTemplateSchema), required=True)
 
 
 class ManifestTemplatesResponseRPC(JsonRPCResponse):

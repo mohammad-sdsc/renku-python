@@ -21,25 +21,20 @@ from renku.service.config import CACHE_PROJECTS_PATH, CACHE_UPLOADS_PATH
 
 def make_project_path(user, project):
     """Construct full path for cached project."""
-    valid_user = user and 'user_id' in user
-    valid_project = project and 'owner' in project and 'name' in project
+    valid_user = user and "user_id" in user
+    valid_project = project and "owner" in project and "name" in project
 
     if valid_user and valid_project:
-        return (
-            CACHE_PROJECTS_PATH / user['user_id'] / project['owner'] /
-            project['name']
-        )
+        return CACHE_PROJECTS_PATH / user["user_id"] / project["owner"] / project["name"]
 
 
 def make_file_path(user, cached_file):
     """Construct full path for cache file."""
-    valid_user = user and 'user_id' in user
-    valid_file = cached_file and 'file_name' in cached_file
+    valid_user = user and "user_id" in user
+    valid_file = cached_file and "file_name" in cached_file
 
     if valid_user and valid_file:
-        return (
-            CACHE_UPLOADS_PATH / user['user_id'] / cached_file['relative_path']
-        )
+        return CACHE_UPLOADS_PATH / user["user_id"] / cached_file["relative_path"]
 
 
 def valid_file(user, cached_file):
@@ -47,5 +42,5 @@ def valid_file(user, cached_file):
     file_path = make_file_path(user, cached_file)
 
     if file_path.exists():
-        cached_file['is_dir'] = file_path.is_dir()
+        cached_file["is_dir"] = file_path.is_dir()
         return cached_file
